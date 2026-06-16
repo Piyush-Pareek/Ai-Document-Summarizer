@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Document Summarizer</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --container-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --accent-blue: #3b82f6;
+            --accent-hover: #2563eb;
+            --border-color: #333;
+            --error-red: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .dashboard {
+            background-color: var(--container-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 700px;
+            border: 1px solid var(--border-color);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--accent-blue);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        input[type="file"] {
+            padding: 12px;
+            background-color: #2a2a2a;
+            border: 1px dashed var(--accent-blue);
+            border-radius: 8px;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        button {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            background-color: #1a1a1a;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 150px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            font-size: 15px;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--accent-blue);
+            font-style: italic;
+            display: none;
+            margin-top: 15px;
+        }
+
+        .error-text {
+            color: var(--error-red);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <h2>AI Document Summarizer</h2>
+        
+        <div class="upload-section">
+            <label for="documentFile">Upload your document (.pdf, .docx, .txt - Max 10 Pages):</label>
+            <input type="file" id="documentFile" accept=".pdf,.docx,.txt">
+            <button id="summarizeBtn" onclick="generateSummary()">Generate Summary</button>
+        </div>
+
+        <div id="loadingIndicator" class="loading">
+            Analyzing document page-by-page... Please wait... 
+            <br>NOTE-: It May Take Some Time for PDF
+        </div>
+
+        <div id="resultContainer" class="result-box"></div>
+    </div>
+
+    <script>
+        async function generateSummary() {
+            const fileInput = document.getElementById('documentFile');
+            const resultContainer = document.getElementById('resultContainer');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const submitBtn = document.getElementById('summarizeBtn');
+
+            // 1. Validation
+            if (!fileInput.files.length) {
+                alert("Bro, you need to select a file first.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            // 2. Prepare the UI for loading
+            resultContainer.style.display = 'none';
+            loadingIndicator.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Processing...";
+
+            // 3. Build the FormData payload for the physical file
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                // 4. Hit your Spring Boot Backend
+                const response = await fetch('/api/document/summarize', {
+                    method: 'POST',
+                    body: formData // Notice we don't set Content-Type header; the browser does it automatically for FormData
+                });
+
+                const data = await response.text();
+
+                // 5. Display Results
+                resultContainer.style.display = 'block';
+                if (response.ok) {
+                    resultContainer.innerHTML = data;
+                    resultContainer.classList.remove('error-text');
+                } else {
+                    resultContainer.innerHTML = "Error: " + data;
+                    resultContainer.classList.add('error-text');
+                }
+            } catch (error) {
+                resultContainer.style.display = 'block';
+                resultContainer.innerHTML = "Server connection failed. Is your Spring Boot engine running?";
+                resultContainer.classList.add('error-text');
+            } finally {
+                // 6. Reset UI
+                loadingIndicator.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Generate Summary";
+            }
+        }
+    </script>
+</body>
+</html>
